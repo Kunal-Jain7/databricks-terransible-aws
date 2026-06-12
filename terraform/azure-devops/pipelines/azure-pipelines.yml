@@ -135,39 +135,40 @@ stages:
             - agent.name -equals databricks
 
           steps:
-          - checkout: self
-            displayName: "Checkout Github repo Code"
-          - bash: |
-              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
-              terraform init \
-                -backend-config="bucket=$(TF_STATE_BUCKET)" \
-                -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
-                -backend-config="region=$(AWS_REGION)" \
-                -backend-config="encrypt=true"
-            displayName: "Terraform Init (for plan stage)"
+            - checkout: self
+              displayName: "Checkout Github repo Code"
 
-          - bash: |
-              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
-              terraform plan \
-                -var="project_name=$(PROJECT_NAME)" \
-                -var="aws_region=$(AWS_REGION)" \
-                -var="owner=$(OWNER)" \
-                -out=$(Build.ArtifactStagingDirectory)/tfplan-$(ENVIRONMENT)
-            displayName: "Terraform Plan"
+            - bash: |
+                cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+                terraform init \
+                  -backend-config="bucket=$(TF_STATE_BUCKET)" \
+                  -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
+                  -backend-config="region=$(AWS_REGION)" \
+                  -backend-config="encrypt=true"
+              displayName: "Terraform Init (for plan stage)"
 
-          - bash: |
-              echo "============================================"
-              echo "Terraform Plan completed successfully"
-              terraform show -no-color $(Build.ArtifactStagingDirectory)/tfplan-$(ENVIRONMENT)
-              echo "============================================"
-              echo "============================================"
-              echo "Review the plan output above for details on proposed changes"
-              echo "============================================"
-            displayName: "Terraform Show Output"
+            - bash: |
+                cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+                terraform plan \
+                  -var="project_name=$(PROJECT_NAME)" \
+                  -var="aws_region=$(AWS_REGION)" \
+                  -var="owner=$(OWNER)" \
+                  -out=$(Build.ArtifactStagingDirectory)/tfplan-$(ENVIRONMENT)
+              displayName: "Terraform Plan"
 
-          - task: PublishPipelineArtifact@1
-            displayName: "Publish Plan Artifact"
-            inputs:
-              targetPath: "$(Build.ArtifactStagingDirectory)"
-              artifactname: "tfplan-$(ENVIRONMENT)"
-            condition: succeeded()
+            - bash: |
+                echo "============================================"
+                echo "Terraform Plan completed successfully"
+                terraform show -no-color $(Build.ArtifactStagingDirectory)/tfplan-$(ENVIRONMENT)
+                echo "============================================"
+                echo "============================================"
+                echo "Review the plan output above for details on proposed changes"
+                echo "============================================"
+              displayName: "Terraform Show Output"
+
+            - task: PublishPipelineArtifact@1
+              displayName: "Publish Plan Artifact"
+              inputs:
+                targetPath: "$(Build.ArtifactStagingDirectory)"
+                artifactname: "tfplan-$(ENVIRONMENT)"
+              condition: succeeded()
