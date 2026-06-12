@@ -77,3 +77,43 @@ stages:
               echo "Region : $(AWS_REGION)"
               echo "============================================"
             displayName: "Terraform Init Output"
+
+# =============================================================
+# STAGE 2 — Terraform Validate
+# =============================================================
+
+  - stage: TerraformValidateStage
+    displayName: "Terraform Validate Stage"
+    dependsOn: TerraformInitStage
+    jobs:
+      - job: ValidateTerraform
+        displayName: "Validating terraform code"
+        pool:
+          name: databricks-ec2
+          demands:
+            - agent.name -equals databricks
+
+        steps:
+          - checkout: self
+            displayName: "Checkout Github repo Code"
+          
+          - bash: |
+              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+              terraform init \
+                -backend-config="bucket=$(TF_STATE_BUCKET)" \
+                -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
+                -backend-config="region=$(AWS_REGION)" \
+                -backend-config="encrypt=true"
+            displayName: "Terraform Init (for validate stage)"
+
+          - bash: |
+              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+              terraform validate
+            displayName: "Terraform Validate"
+
+          - bash: |
+              echo "============================================"
+              echo "Terraform Validate completed successfully"
+              echo "All configuration files are valid"
+              echo "============================================"
+            displayName: "Terraform Validate Summary"
