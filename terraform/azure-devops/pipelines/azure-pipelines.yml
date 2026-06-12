@@ -39,10 +39,10 @@ stages:
 # =============================================================
 # STAGE 1 — Terraform Init
 # =============================================================
-  - stage: Terraform Init Stage
+  - stage: TerraformInitStage
     displayName: "Terraform Init Stage"
     jobs:
-      - job: Initialize Terraform
+      - job: InitializeTerraform
         displayName: "Initializing terraform backend"
         pool:
           name: databricks-ec2
@@ -60,7 +60,7 @@ stages:
               echo "============================================"
             displayName: "Check Terraform and AWS CLI versions"
           
-          - bash:
+          - bash: |
               cd $(TF_WORKSPACE)
               terraform init \
                 -backend-config="bucket=$(TF_STATE_BUCKET)" \
@@ -69,7 +69,7 @@ stages:
                 -backend-config="encrypt=true"
             displayName: "Terraform Init"
 
-          - bash:
+          - bash: |
               echo "============================================"
               echo "Terraform Init completed successfully"
               echo "Bucket : $(TF_STATE_BUCKET)"
