@@ -23,7 +23,7 @@ resource "aws_vpc" "client-vpc" {
 # ─── INTERNET GATEWAY ───────────────────────────────────────────────────────
 
 resource "aws_internet_gateway" "client-igw" {
-  vpc_id = aws.vpc.client-vpc.id
+  vpc_id = aws_vpc.client-vpc.id
   tags = merge(var.tags, {
     Name = "${var.name_prefix}-igw"
   })
