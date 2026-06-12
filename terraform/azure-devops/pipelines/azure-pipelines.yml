@@ -1,0 +1,79 @@
+# azure-devops/pipelines/azure-pipelines.yml
+# =============================================================
+# STAGE 1: Terraform Init + Validate + Plan (Phase 1 - VPC only)
+# More stages will be added as we progress phase by phase
+# =============================================================
+
+trigger: 
+  branches:
+    include:
+      - main
+      - staging
+      - dev
+  paths:
+    include:
+      - 'terraform/**'
+      - 'azure-devops/pipelines/**'
+
+pr:
+  branches:
+    include:
+      - main
+      - staging
+      - dev
+  paths:
+    include:
+      - 'terraform/**'
+
+# ─── Variable Groups ──────────────────────────────────────────────────────────
+
+variables: 
+  - group: databricks-aws-common
+  - name: TF_WORKSPACE
+    value: "terraform/environments/dev"
+  - name: Environment
+    value: "dev"
+
+stages:
+
+# =============================================================
+# STAGE 1 — Terraform Init
+# =============================================================
+  - stage: Terraform Init Stage
+    displayName: "Terraform Init Stage"
+    jobs:
+      - job: Initialize Terraform
+        displayName: "Initializing terraform backend"
+        pool:
+          name: databricks-ec2
+          demands: 
+            - agent.name -equals databricks
+
+        steps:
+          - checkout: self
+            displayName: "Checkout Github repo Code"
+          
+          - bash: |
+              echo "============================================"
+              terraform --version
+              aws --version
+              echo "============================================"
+            displayName: "Check Terraform and AWS CLI versions"
+          
+          - bash:
+              cd $(TF_WORKSPACE)
+              terraform init \
+                -backend-config="bucket=$(TF_STATE_BUCKET)" \
+                -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
+                -backend-config="region=$(AWS_REGION)" \
+                -backend-config="encrypt=true"
+            displayName: "Terraform Init"
+
+          - bash:
+              echo "============================================"
+              echo "Terraform Init completed successfully"
+              echo "Bucket : $(TF_STATE_BUCKET)"
+              echo "Key : databricks/$(Environment)/terraform.tfstate"
+              echo "Region : $(AWS_REGION)"
+              echo "============================================"
+            displayName: "Terraform Init Output"
