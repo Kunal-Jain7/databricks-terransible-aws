@@ -32,7 +32,7 @@ resource "aws_internet_gateway" "client-igw" {
 # ─── PUBLIC SUBNETS ─────────────────────────────────────────────────────────
 
 resource "aws_subnet" "client-public-subnet" {
-  count                   = length(data.aws_availability_zones.available.names)
+  count                   = length(var.public_subnet_cidrs)
   vpc_id                  = aws_vpc.client-vpc.id
   cidr_block              = var.public_subnet_cidrs[count.index]
   availability_zone       = data.aws_availability_zones.available.names[count.index]
@@ -47,7 +47,7 @@ resource "aws_subnet" "client-public-subnet" {
 # ─── PRIVATE SUBNETS (Databricks nodes live here) ───────────────────────────
 
 resource "aws_subnet" "client-private-subnet" {
-  count             = length(data.aws_availability_zones.available.names)
+  count             = length(var.private_subnet_cidrs)
   vpc_id            = aws_vpc.client-vpc.id
   cidr_block        = var.private_subnet_cidrs[count.index]
   availability_zone = data.aws_availability_zones.available.names[count.index]
