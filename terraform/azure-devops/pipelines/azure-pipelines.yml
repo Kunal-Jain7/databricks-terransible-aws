@@ -160,10 +160,14 @@ stages:
         echo "============================================"
         echo "Terraform Plan completed successfully"
         terraform show -no-color $(Build.ArtifactStagingDirectory)/tfplan-$(Environment)
+        terraform show -no-color $(Build.ArtifactStagingDirectory)/tfplan-$(Environment) > $(Build.ArtifactStagingDirectory)/tfplan-$(Environment).txt
+        terraform show -json $(Build.ArtifactStagingDirectory)/tfplan-$(Environment) > $(Build.ArtifactStagingDirectory)/tfplan-$(Environment).json
         echo "============================================"
         echo "============================================"
         echo "Review the plan output above for details on proposed changes"
         echo "============================================"
+        echo "Generated artifacts:"
+        ls -lh $(Build.ArtifactStagingDirectory)
       displayName: "Terraform Show Output"
 
     - task: PublishPipelineArtifact@1
