@@ -188,7 +188,7 @@ stages:
   jobs:
   - deployment: ApplyInfra
     displayName: "Apply Terraform changes"
-    environment: "dev_databricks"
+    environment: "dev-databricks"
 
     pool:
       name: databricks-ec2
