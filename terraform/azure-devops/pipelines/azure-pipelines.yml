@@ -4,171 +4,171 @@
 # More stages will be added as we progress phase by phase
 # =============================================================
 
-trigger: 
+trigger:
   branches:
     include:
-      - main
-      - staging
-      - dev
+    - main
+    - staging
+    - dev
   paths:
     include:
-      - 'terraform/**'
-      - 'azure-devops/pipelines/**'
+    - 'terraform/**'
+    - 'azure-devops/pipelines/**'
 
 pr:
   branches:
     include:
-      - main
-      - staging
-      - dev
+    - main
+    - staging
+    - dev
   paths:
     include:
-      - 'terraform/**'
+    - 'terraform/**'
 
 # ─── Variable Groups ──────────────────────────────────────────────────────────
 
-variables: 
-  - group: databricks-aws-common
-  - name: TERRAFORM_DIR
-    value: "terraform/environments/dev"
-  - name: Environment
-    value: "dev"
+variables:
+- group: databricks-aws-common
+- name: TERRAFORM_DIR
+  value: "terraform/environments/dev"
+- name: Environment
+  value: "dev"
 
 stages:
 
 # =============================================================
 # STAGE 1 — Terraform Init
 # =============================================================
-  - stage: TerraformInitStage
-    displayName: "Terraform Init Stage"
-    jobs:
-      - job: InitializeTerraform
-        displayName: "Initializing terraform backend"
-        pool:
-          name: databricks-ec2
-          demands: 
-            - agent.name -equals databricks
+- stage: TerraformInitStage
+  displayName: "Terraform Init Stage"
+  jobs:
+  - job: InitializeTerraform
+    displayName: "Initializing terraform backend"
+    pool:
+      name: databricks-ec2
+      demands:
+      - agent.name -equals databricks
 
-        steps:
-          - checkout: self
-            displayName: "Checkout Github repo Code"
-          
-          - bash: |
-              echo "============================================"
-              terraform --version
-              aws --version
-              echo "============================================"
-            displayName: "Check Terraform and AWS CLI versions"
-          
-          - bash: |
-              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
-              terraform init \
-                -backend-config="bucket=$(TF_STATE_BUCKET)" \
-                -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
-                -backend-config="region=$(AWS_REGION)" \
-                -backend-config="encrypt=true"
-            displayName: "Terraform Init"
+    steps:
+    - checkout: self
+      displayName: "Checkout Github repo Code"
 
-          - bash: |
-              echo "============================================"
-              echo "Terraform Init completed successfully"
-              echo "Bucket : $(TF_STATE_BUCKET)"
-              echo "Key : databricks/$(Environment)/terraform.tfstate"
-              echo "Region : $(AWS_REGION)"
-              echo "============================================"
-            displayName: "Terraform Init Output"
+    - bash: |
+        echo "============================================"
+        terraform --version
+        aws --version
+        echo "============================================"
+      displayName: "Check Terraform and AWS CLI versions"
+
+    - bash: |
+        cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+        terraform init \
+          -backend-config="bucket=$(TF_STATE_BUCKET)" \
+          -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
+          -backend-config="region=$(AWS_REGION)" \
+          -backend-config="encrypt=true"
+      displayName: "Terraform Init"
+
+    - bash: |
+        echo "============================================"
+        echo "Terraform Init completed successfully"
+        echo "Bucket : $(TF_STATE_BUCKET)"
+        echo "Key : databricks/$(Environment)/terraform.tfstate"
+        echo "Region : $(AWS_REGION)"
+        echo "============================================"
+      displayName: "Terraform Init Output"
 
 # =============================================================
 # STAGE 2 — Terraform Validate
 # =============================================================
 
-  - stage: TerraformValidateStage
-    displayName: "Terraform Validate Stage"
-    dependsOn: TerraformInitStage
-    jobs:
-      - job: ValidateTerraform
-        displayName: "Validating terraform code"
-        pool:
-          name: databricks-ec2
-          demands:
-            - agent.name -equals databricks
+- stage: TerraformValidateStage
+  displayName: "Terraform Validate Stage"
+  dependsOn: TerraformInitStage
+  jobs:
+  - job: ValidateTerraform
+    displayName: "Validating terraform code"
+    pool:
+      name: databricks-ec2
+      demands:
+      - agent.name -equals databricks
 
-        steps:
-          - checkout: self
-            displayName: "Checkout Github repo Code"
-          
-          - bash: |
-              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
-              terraform init \
-                -backend-config="bucket=$(TF_STATE_BUCKET)" \
-                -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
-                -backend-config="region=$(AWS_REGION)" \
-                -backend-config="encrypt=true"
-            displayName: "Terraform Init (for validate stage)"
+    steps:
+    - checkout: self
+      displayName: "Checkout Github repo Code"
 
-          - bash: |
-              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
-              terraform validate
-            displayName: "Terraform Validate"
+    - bash: |
+        cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+        terraform init \
+          -backend-config="bucket=$(TF_STATE_BUCKET)" \
+          -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
+          -backend-config="region=$(AWS_REGION)" \
+          -backend-config="encrypt=true"
+      displayName: "Terraform Init (for validate stage)"
 
-          - bash: |
-              echo "============================================"
-              echo "Terraform Validate completed successfully"
-              echo "All configuration files are valid"
-              echo "============================================"
-            displayName: "Terraform Validate Summary"
+    - bash: |
+        cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+        terraform validate
+      displayName: "Terraform Validate"
+
+    - bash: |
+        echo "============================================"
+        echo "Terraform Validate completed successfully"
+        echo "All configuration files are valid"
+        echo "============================================"
+      displayName: "Terraform Validate Summary"
 
 # =============================================================
 # STAGE 3 — Terraform Plan
 # =============================================================
 
-  - stage: TerraformPlanStage
-    displayName: "Terraform Plan Stage"
-    dependsOn: TerraformValidateStage
-    condition: succeeded()
-    jobs:
-      - job: PlanTerraform
-        displayName: "Planning terraform changes"
-        pool:
-          name: databricks-ec2
-          demands:
-            - agent.name -equals databricks
+- stage: TerraformPlanStage
+  displayName: "Terraform Plan Stage"
+  dependsOn: TerraformValidateStage
+  condition: succeeded()
+  jobs:
+  - job: PlanTerraform
+    displayName: "Planning terraform changes"
+    pool:
+      name: databricks-ec2
+      demands:
+      - agent.name -equals databricks
 
-          steps:
-            - checkout: self
-              displayName: "Checkout Github repo Code"
+    steps:
+    - checkout: self
+      displayName: "Checkout Github repo Code"
 
-            - bash: |
-                cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
-                terraform init \
-                  -backend-config="bucket=$(TF_STATE_BUCKET)" \
-                  -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
-                  -backend-config="region=$(AWS_REGION)" \
-                  -backend-config="encrypt=true"
-              displayName: "Terraform Init (for plan stage)"
+    - bash: |
+        cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+        terraform init \
+          -backend-config="bucket=$(TF_STATE_BUCKET)" \
+          -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
+          -backend-config="region=$(AWS_REGION)" \
+          -backend-config="encrypt=true"
+      displayName: "Terraform Init (for plan stage)"
 
-            - bash: |
-                cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
-                terraform plan \
-                  -var="project_name=$(PROJECT_NAME)" \
-                  -var="aws_region=$(AWS_REGION)" \
-                  -var="owner=$(OWNER)" \
-                  -out=$(Build.ArtifactStagingDirectory)/tfplan-$(ENVIRONMENT)
-              displayName: "Terraform Plan"
+    - bash: |
+        cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+        terraform plan \
+          -var="project_name=$(PROJECT_NAME)" \
+          -var="aws_region=$(AWS_REGION)" \
+          -var="owner=$(OWNER)" \
+          -out=$(Build.ArtifactStagingDirectory)/tfplan-$(Environment)
+      displayName: "Terraform Plan"
 
-            - bash: |
-                echo "============================================"
-                echo "Terraform Plan completed successfully"
-                terraform show -no-color $(Build.ArtifactStagingDirectory)/tfplan-$(ENVIRONMENT)
-                echo "============================================"
-                echo "============================================"
-                echo "Review the plan output above for details on proposed changes"
-                echo "============================================"
-              displayName: "Terraform Show Output"
+    - bash: |
+        echo "============================================"
+        echo "Terraform Plan completed successfully"
+        terraform show -no-color $(Build.ArtifactStagingDirectory)/tfplan-$(Environment)
+        echo "============================================"
+        echo "============================================"
+        echo "Review the plan output above for details on proposed changes"
+        echo "============================================"
+      displayName: "Terraform Show Output"
 
-            - task: PublishPipelineArtifact@1
-              displayName: "Publish Plan Artifact"
-              inputs:
-                targetPath: "$(Build.ArtifactStagingDirectory)"
-                artifactname: "tfplan-$(ENVIRONMENT)"
-              condition: succeeded()
+    - task: PublishPipelineArtifact@1
+      displayName: "Publish Plan Artifact"
+      inputs:
+        targetPath: "$(Build.ArtifactStagingDirectory)"
+        artifactName: "tfplan-$(ENVIRONMENT)"
+      condition: succeeded()
