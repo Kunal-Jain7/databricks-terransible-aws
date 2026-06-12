@@ -176,3 +176,52 @@ stages:
         targetPath: "$(Build.ArtifactStagingDirectory)"
         artifactName: "tfplan-$(ENVIRONMENT)"
       condition: succeeded()
+
+# =============================================================
+# STAGE 3 — Terraform Apply
+# =============================================================
+
+- stage: TerraformApplyStage
+  displayName: "Terraform Apply Stage"
+  dependsOn: TerraformPlanStage
+  condition: succeeded()
+  jobs:
+  - deployment: ApplyInfra
+    displayName: "Apply Terraform changes"
+    environment: "dev_databricks"
+
+    pool:
+      name: databricks-ec2
+      demands:
+      - agent.name -equals databricks
+
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - checkout: self
+            displayName: "Checkout Github Repo"
+
+          - bash: |
+              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+              terraform init \
+                -backend-config="bucket=$(TF_STATE_BUCKET)" \
+                -backend-config="key=databricks/$(Environment)/terraform.tfstate" \
+                -backend-config="region=$(AWS_REGION)" \
+                -backend-config="encrypt=true"
+            displayName: "Terraform Init (for apply stage)"
+
+          - bash: |
+              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+              terraform apply -auto-approve \
+                $(Pipeline.Workspace)/tfplan-$(Environment)/tfplan-$(Environment)
+            displayName: "Terraform apply"
+
+          - bash: |
+              cd $(Build.SourcesDirectory)/$(TERRAFORM_DIR)
+              echo "============================================"
+              echo "Apply Outputs"
+              echo "============================================"
+              terraform output -no-color
+              echo "============================================"
+            displayName: "Show Outputs"
